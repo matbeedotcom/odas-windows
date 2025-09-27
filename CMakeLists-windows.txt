@@ -1,3 +1,4 @@
+# Simplified ODAS build for Windows (no ALSA/PulseAudio dependencies)
 project(ODAS)
 cmake_minimum_required(VERSION 2.4.6..3.16)
 
@@ -9,44 +10,16 @@ option(ODAS_INSTALL_EXECUTABLES "Install the odaslive and odasserver executables
 option(ODAS_FORCE_BIN_AND_LIB_DIRS "Force the installation of the odas library and executables in the bin and lib directories" ON)
 option(ODAS_DISABLE_INSTALL "Disable the installation of the odas library and executables" OFF)
 
-
+# Windows-specific: Use Windows audio APIs instead of ALSA/PulseAudio
 find_package(PkgConfig REQUIRED)
+pkg_check_modules(PC_FFTW3 REQUIRED fftw3f)
+pkg_check_modules(PC_LIBCONFIG REQUIRED libconfig)
 
-# Handle FFTW dependency differently for cross-compilation
-if(CMAKE_CROSSCOMPILING)
-    # For cross-compilation, use our custom FFTW installation
-    set(FFTW3F_INCLUDE_DIR "/mnt/c/Users/mail/dev/personal/teensy_ambisonic_microphone/odas/fftw-mingw-build/install/include")
-    set(FFTW3F_LIBRARY "/mnt/c/Users/mail/dev/personal/teensy_ambisonic_microphone/odas/fftw-mingw-build/install/lib/libfftw3f.a")
-    set(PC_FFTW3_INCLUDE_DIRS ${FFTW3F_INCLUDE_DIR})
-    set(PC_FFTW3_LIBRARIES ${FFTW3F_LIBRARY})
-else()
-    # For native compilation, use pkg-config
-    pkg_check_modules(PC_FFTW3 REQUIRED fftw3f)
-endif()
-
-# libconfig is only needed for demo executables
-if(NOT CMAKE_CROSSCOMPILING)
-    pkg_check_modules(PC_LIBCONFIG REQUIRED libconfig)
-endif()
-
-# Handle Windows vs Linux audio APIs
-if(WIN32 OR CMAKE_CROSSCOMPILING)
-    # Windows: Use Windows audio APIs
-    set(PC_ALSA_FOUND FALSE)
-    set(PC_PULSEAUDIO_FOUND FALSE)
-    add_definitions(-D_WINDOWS -DWIN32)
-    # For cross-compilation, avoid including Linux system headers
-    include_directories(BEFORE SYSTEM)
-else()
-    # Linux: Use ALSA/PulseAudio
-    pkg_check_modules(PC_ALSA REQUIRED alsa)
-    pkg_check_modules(PC_PULSEAUDIO REQUIRED libpulse-simple)
-endif()
+# Skip ALSA and PulseAudio checks for Windows
+set(PC_ALSA_FOUND FALSE)
+set(PC_PULSEAUDIO_FOUND FALSE)
 
 include_directories("${PROJECT_SOURCE_DIR}/include")
-
-# Add FFTW include directories from pkg-config
-include_directories(${PC_FFTW3_INCLUDE_DIRS})
 
 # Compile in release mode if not set
 if(NOT CMAKE_BUILD_TYPE)
@@ -61,7 +34,11 @@ endif()
 #Add base directory for includes (global)
 include_directories(include/odas)
 
-set(SRC_BASE
+# Add Windows-specific definitions
+add_definitions(-D_WINDOWS -DWIN32)
+
+set(SRC
+
     src/general/format.c
     src/general/interface.c
     src/general/link.c
@@ -180,6 +157,13 @@ set(SRC_BASE
     src/amodule/amod_sst.c
     src/amodule/amod_stft.c
     src/amodule/amod_volume.c
+    src/asink/asnk_categories.c
+    src/asink/asnk_hops.c
+    src/asink/asnk_pots.c
+    src/asink/asnk_powers.c
+    src/asink/asnk_spectra.c
+    src/asink/asnk_tracks.c
+    src/asource/asrc_hops.c
 
     src/connector/con_categories.c
     src/connector/con_hops.c
@@ -206,10 +190,6 @@ set(SRC_BASE
     src/module/mod_sst.c
     src/module/mod_stft.c
     src/module/mod_volume.c
-)
-
-# Network-related files that require sys/socket.h (not available on Windows)
-set(SRC_NETWORK
     src/sink/snk_categories.c
     src/sink/snk_hops.c
     src/sink/snk_pots.c
@@ -217,74 +197,40 @@ set(SRC_NETWORK
     src/sink/snk_spectra.c
     src/sink/snk_tracks.c
     src/source/src_hops.c
-    # Abstract sink/source files that also use network headers
-    src/asink/asnk_categories.c
-    src/asink/asnk_hops.c
-    src/asink/asnk_pots.c
-    src/asink/asnk_powers.c
-    src/asink/asnk_spectra.c
-    src/asink/asnk_tracks.c
-    src/asource/asrc_hops.c
-)
 
-# Conditionally include network files based on platform
-if(WIN32 OR CMAKE_CROSSCOMPILING)
-    # Windows build: exclude network files
-    set(SRC ${SRC_BASE})
-else()
-    # Linux build: include all files
-    set(SRC ${SRC_BASE} ${SRC_NETWORK})
-endif()
+)
 
 add_library(odas SHARED
     ${SRC}
 )
 
-if(WIN32 OR CMAKE_CROSSCOMPILING)
-    # Windows: Use Windows audio APIs with pthread support
-    target_link_libraries(odas
-        ${PC_FFTW3_LIBRARIES}
-        ${PC_LIBCONFIG_LIBRARIES}
-        winmm  # Windows Multimedia API
-        winpthread  # MinGW pthread support (use winpthread for MinGW)
-    )
-    # Add library search paths for Windows cross-compilation
-    target_link_directories(odas PRIVATE ${PC_FFTW3_LIBRARY_DIRS} ${PC_LIBCONFIG_LIBRARY_DIRS})
-else()
-    # Linux: Use ALSA/PulseAudio
-    target_link_libraries(odas
-        ${PC_FFTW3_LIBRARIES}
-        ${PC_ALSA_LIBRARIES}
-        ${PC_LIBCONFIG_LIBRARIES}
-        ${PC_PULSEAUDIO_LIBRARIES}
-        m
-        pthread
-    )
-endif()
+# Windows-specific linking (use Windows audio APIs)
+target_link_libraries(odas
+    ${PC_FFTW3_LIBRARIES}
+    ${PC_LIBCONFIG_LIBRARIES}
+    winmm  # Windows Multimedia API for audio
+    m
+    pthread
+)
 
-# Only build demo executables for native compilation
-if(NOT CMAKE_CROSSCOMPILING)
-    add_executable(odaslive
-        demo/odaslive/main.c
-        demo/odaslive/configs.c
-        demo/odaslive/objects.c
-        demo/odaslive/parameters.c
-        demo/odaslive/profiler.c
-        demo/odaslive/threads.c
-    )
-    target_link_libraries(odaslive
-        odas
-        ${PC_LIBCONFIG_LIBRARIES}
-    )
+add_executable(odaslive
+    demo/odaslive/main.c
+    demo/odaslive/configs.c
+    demo/odaslive/objects.c
+    demo/odaslive/parameters.c
+    demo/odaslive/profiler.c
+    demo/odaslive/threads.c
+)
+target_link_libraries(odaslive
+    odas
+)
 
-    add_executable(odasserver
-        demo/odasserver/main.c
-    )
-    target_link_libraries(odasserver
-        odas
-        ${PC_LIBCONFIG_LIBRARIES}
-    )
-endif()
+add_executable(odasserver
+    demo/odasserver/main.c
+)
+target_link_libraries(odasserver
+    odas
+)
 
 if (NOT ODAS_DISABLE_INSTALL)
     install(TARGETS odas LIBRARY DESTINATION lib)
@@ -300,7 +246,6 @@ if (NOT ODAS_DISABLE_INSTALL)
         install(TARGETS odasserver DESTINATION bin)
     endif()
 endif()
-
 
 if(ODAS_FORCE_BIN_AND_LIB_DIRS)
     unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)

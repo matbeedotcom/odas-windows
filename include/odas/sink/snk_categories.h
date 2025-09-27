@@ -32,10 +32,13 @@
     #include <stdlib.h>
     #include <stdio.h>
     #include <string.h>
+
+    #ifndef _WIN32
     #include <unistd.h>
     #include <sys/socket.h>
     #include <netinet/in.h>
     #include <arpa/inet.h>
+    #endif
 
     #include "../general/format.h"
     #include "../general/interface.h"

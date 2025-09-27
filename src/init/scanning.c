@@ -38,15 +38,15 @@
         beampatterns_obj * beampatterns_spatialfilters;
         spatialgains_obj * spatialgains;
         spatialmasks_obj ** spatialmasks;
-        pairs_obj * pairs;        
-        points_obj * pointsRefined;   
-        taus_obj * taus;   
-        maps_obj * maps;     
+        pairs_obj * pairs;
+        points_obj * pointsRefined;
+        taus_obj * taus;
+        maps_obj * maps;
 
-        obj = scans_construct_null(nLevels);       
+        obj = scans_construct_null(nLevels);
 
         obj->pairs = pairs_construct_zero(mics->nPairs);
-        beampatterns_mics = directivity_beampattern_mics(mics, nThetas);      
+        beampatterns_mics = directivity_beampattern_mics(mics, nThetas);
         beampatterns_spatialfilters = directivity_beampattern_spatialfilters(spatialfilters, nThetas);
 
         spatialmasks = (spatialmasks_obj **) malloc(sizeof(spatialmasks_obj *) * nLevels);
@@ -57,23 +57,23 @@
             obj->points[iLevel] = space_sphere(levels[iLevel]);
 
             // Generate TDOAs
-            obj->tdoas[iLevel] = delay_tdoas(obj->points[iLevel], 
-                                             mics, 
-                                             soundspeed, 
-                                             fS, 
+            obj->tdoas[iLevel] = delay_tdoas(obj->points[iLevel],
+                                             mics,
+                                             soundspeed,
+                                             fS,
                                              frameSize,
-                                             interpRate);            
+                                             interpRate);
 
             // Generate gains in space
-            spatialgains = directivity_spatialgains(mics, 
+            spatialgains = directivity_spatialgains(mics,
                                                     beampatterns_mics,
-                                                    spatialfilters, 
+                                                    spatialfilters,
                                                     beampatterns_spatialfilters,
-                                                    obj->points[iLevel]);           
+                                                    obj->points[iLevel]);
 
             // Generate masks in space
-            spatialmasks[iLevel] = directivity_spatialmasks(spatialgains, 
-                                                            gainMin);    
+            spatialmasks[iLevel] = directivity_spatialmasks(spatialgains,
+                                                            gainMin);
             spatialgains_destroy(spatialgains);
 
             // Generate masks for pairs
@@ -90,16 +90,16 @@
                 pointsRefined = space_points_fine(obj->points[iLevel],
                                                   nRefineLevels);
 
-                taus = delay_taus(pointsRefined, 
-                                  mics, 
-                                  soundspeed, 
-                                  fS, 
+                taus = delay_taus(pointsRefined,
+                                  mics,
+                                  soundspeed,
+                                  fS,
                                   frameSize,
                                   interpRate);
 
-                obj->deltas[iLevel] = hit_train(taus, 
-                                                obj->tdoas[iLevel], 
-                                                spatialmasks[iLevel], 
+                obj->deltas[iLevel] = hit_train(taus,
+                                                obj->tdoas[iLevel],
+                                                spatialmasks[iLevel],
                                                 probMin);
 
                 points_destroy(pointsRefined);
@@ -109,7 +109,7 @@
             }
             else {
 
-                obj->deltas[iLevel] = hit_constant(obj->tdoas[iLevel], 
+                obj->deltas[iLevel] = hit_constant(obj->tdoas[iLevel],
                                                    deltas[iLevel]);
 
             }
@@ -123,18 +123,18 @@
 
             if (iLevel == 0) {
 
-                maps = linking_maps(NULL, obj->tdoas[0], 
-                                    NULL, obj->deltas[0], 
-                                    NULL, spatialmasks[0], 
-                                    nMatches);       
+                maps = linking_maps(NULL, obj->tdoas[0],
+                                    NULL, obj->deltas[0],
+                                    NULL, spatialmasks[0],
+                                    nMatches);
 
             }
             else {
 
-                maps = linking_maps(obj->tdoas[iLevel-1], obj->tdoas[iLevel], 
-                                    obj->deltas[iLevel-1], obj->deltas[iLevel], 
+                maps = linking_maps(obj->tdoas[iLevel-1], obj->tdoas[iLevel],
+                                    obj->deltas[iLevel-1], obj->deltas[iLevel],
                                     spatialmasks[iLevel-1], spatialmasks[iLevel],
-                                    nMatches);          
+                                    nMatches);
 
             }
 

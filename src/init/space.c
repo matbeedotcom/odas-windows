@@ -699,7 +699,6 @@
 
         nPointsCoarse = points->nPoints;
         nPointsFine = nPointsCoarse * nFinesPerCoarse;
-
         obj = points_construct_zero(nPointsFine);
 
         for (iCoarse = 0; iCoarse < nPointsCoarse; iCoarse++) {
@@ -730,7 +729,6 @@
 
         points_obj * obj;
         triangles_obj * triangles;
-
         triangles = space_triangles_level_level(level);
         obj = space_points_triangles(triangles);
         triangles_destroy(triangles);

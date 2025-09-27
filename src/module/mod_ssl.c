@@ -48,7 +48,7 @@
         obj->frameSizeInterp = obj->frameSize * mod_ssl_config->interpRate;
         obj->halfFrameSizeInterp = (obj->halfFrameSize - 1) * mod_ssl_config->interpRate + 1;
         obj->interpRate = mod_ssl_config->interpRate;
-
+        
         obj->scans = scanning_init_scans(mod_ssl_config->mics, 
                                          mod_ssl_config->spatialfilters,
                                          mod_ssl_config->nLevels, 
@@ -170,24 +170,24 @@
 
             if (obj->enabled == 1) {
 
-                freq2freq_phasor_process(obj->freq2freq_phasor, 
-                                         obj->in->freqs, 
+                freq2freq_phasor_process(obj->freq2freq_phasor,
+                                         obj->in->freqs,
                                          obj->phasors);
 
-                freq2freq_product_process(obj->freq2freq_product, 
-                                          obj->phasors, 
+                freq2freq_product_process(obj->freq2freq_product,
+                                          obj->phasors,
                                           obj->phasors,
                                           obj->scans->pairs,
-                                          obj->products);        
+                                          obj->products);
 
                 freq2freq_interpolate_process(obj->freq2freq_interpolate,
                                               obj->products,
                                               obj->productsInterp);
 
-                freq2xcorr_process(obj->freq2xcorr, 
-                                   obj->productsInterp, 
+                freq2xcorr_process(obj->freq2xcorr,
+                                   obj->productsInterp,
                                    obj->scans->pairs,
-                                   obj->xcorrs);           
+                                   obj->xcorrs);
 
                 for (iPot = 0; iPot < obj->nPots; iPot++) {
                     
@@ -233,7 +233,7 @@
                             }
 
                         }
-                       
+
                     }
 
                     obj->pots->array[iPot * 4 + 0] = obj->scans->points[obj->nLevels-1]->array[maxIndex * 3 + 0];

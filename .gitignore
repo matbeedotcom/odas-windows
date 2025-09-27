@@ -3,3 +3,6 @@ bin
 lib
 .vscode
 *.raw
+build*
+fftw-mingw-build
+windows-deps/
