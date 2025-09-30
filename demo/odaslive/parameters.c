@@ -218,6 +218,15 @@
                 free((void *) tmpStr2);
 
             }
+            else if (strcmp(tmpStr1, "wasapi") == 0) {
+
+                tmpStr2 = parameters_lookup_string(fileConfig, "raw.interface.devicename");
+
+                cfg->interface = interface_construct_wasapi(tmpStr2);
+
+                free((void *) tmpStr2);
+
+            }
             else {
                 printf("raw.interface.type: Invalid type\n");
                 exit(EXIT_FAILURE);
@@ -257,8 +266,13 @@
 
     }
 
+    #ifndef _WIN32
     pa_channel_map* parameters_pa_channel_map_config(const char* fileConfig)
+    #else
+    void* parameters_pa_channel_map_config(const char* fileConfig)
+    #endif
     {
+        #ifndef _WIN32
         unsigned int nChannels = parameters_count(fileConfig, "raw.interface.channelmap");
         pa_channel_map* map = (pa_channel_map*) malloc(sizeof(pa_channel_map));
         pa_channel_map_init(map);
@@ -290,8 +304,12 @@
             printf("Invalid channel map\n");
             exit(EXIT_FAILURE);
         }
-        
+
         return map;
+        #else
+        // Windows doesn't support PulseAudio channel maps
+        return NULL;
+        #endif
     }
 
     mod_mapping_cfg * parameters_mod_mapping_mics_config(const char * fileConfig) {

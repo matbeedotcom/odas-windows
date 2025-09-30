@@ -32,10 +32,19 @@
     #include <stdlib.h>
     #include <stdio.h>
     #include <string.h>
-    #include <sys/socket.h>
-    #include <netinet/in.h>
-    #include <arpa/inet.h>
-    #include <unistd.h>
+    #ifndef _WIN32
+        #include <unistd.h>
+        #include <sys/socket.h>
+        #include <netinet/in.h>
+        #include <arpa/inet.h>
+    #else
+        #include <winsock2.h>
+        #include <ws2tcpip.h>
+        // Windows headers define 'interface' as a macro, which conflicts with our variable names
+        #ifdef interface
+            #undef interface
+        #endif
+    #endif
 
     #include "../general/format.h"
     #include "../general/interface.h"
@@ -57,7 +66,11 @@
         FILE * fp;
 
         struct sockaddr_in sserver;
-        int sid;
+        #ifndef _WIN32
+            int sid;
+        #else
+            SOCKET sid;
+        #endif
 
         msg_tracks_obj * in;
 

@@ -41,7 +41,8 @@
         interface_socket = 3,
         interface_soundcard = 4,
         interface_terminal = 5,
-        interface_pulseaudio = 6
+        interface_pulseaudio = 6,
+        interface_wasapi = 7
 
     } interface_type;
 
@@ -73,6 +74,8 @@
     interface_obj * interface_construct_soundcard_by_name(char * deviceName);
 
     interface_obj * interface_construct_terminal(void);
+
+    interface_obj * interface_construct_wasapi(const char * deviceName);
 
     interface_obj * interface_clone(const interface_obj * obj);
 

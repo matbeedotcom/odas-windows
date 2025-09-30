@@ -4,7 +4,11 @@
     #include <odas/odas.h>
     #include <libconfig.h>
     #include <stdbool.h>
-    
+
+    #ifndef _WIN32
+        #include <pulse/channelmap.h>
+    #endif
+
     int parameters_lookup_int(const char * file, const char * path);
 
     float parameters_lookup_float(const char * file, const char * path);
@@ -20,7 +24,11 @@
 
     msg_hops_cfg * parameters_msg_hops_mics_raw_config(const char * fileConfig);
 
-    pa_channel_map* parameters_pa_channel_map_config(const char* fileConfig);
+    #ifndef _WIN32
+        pa_channel_map* parameters_pa_channel_map_config(const char* fileConfig);
+    #else
+        void* parameters_pa_channel_map_config(const char* fileConfig);
+    #endif
 
 
     mod_mapping_cfg * parameters_mod_mapping_mics_config(const char * fileConfig);

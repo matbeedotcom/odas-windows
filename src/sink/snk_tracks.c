@@ -26,8 +26,22 @@
     * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     *
     */
-    
+
     #include <sink/snk_tracks.h>
+
+    #ifdef _WIN32
+        static int winsock_initialized = 0;
+        static void init_winsock() {
+            if (!winsock_initialized) {
+                WSADATA wsa;
+                if (WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
+                    printf("Failed to initialize Winsock\n");
+                    exit(EXIT_FAILURE);
+                }
+                winsock_initialized = 1;
+            }
+        }
+    #endif
 
     snk_tracks_obj * snk_tracks_construct(const snk_tracks_cfg * snk_tracks_config, const msg_tracks_cfg * msg_tracks_config) {
 
@@ -149,12 +163,23 @@
 
     void snk_tracks_open_interface_socket(snk_tracks_obj * obj) {
 
+        #ifdef _WIN32
+            init_winsock();
+        #endif
+
         memset(&(obj->sserver), 0x00, sizeof(struct sockaddr_in));
 
         obj->sserver.sin_family = AF_INET;
         obj->sserver.sin_addr.s_addr = inet_addr(obj->interface->ip);
         obj->sserver.sin_port = htons(obj->interface->port);
         obj->sid = socket(AF_INET, SOCK_STREAM, 0);
+
+        #ifdef _WIN32
+            if (obj->sid == INVALID_SOCKET) {
+                printf("Sink tracks: Cannot create socket\n");
+                exit(EXIT_FAILURE);
+            }
+        #endif
 
         if ( (connect(obj->sid, (struct sockaddr *) &(obj->sserver), sizeof(obj->sserver))) < 0 ) {
 
@@ -224,7 +249,11 @@
 
     void snk_tracks_close_interface_socket(snk_tracks_obj * obj) {
 
-        close(obj->sid);
+        #ifdef _WIN32
+            closesocket(obj->sid);
+        #else
+            close(obj->sid);
+        #endif
 
     }
 

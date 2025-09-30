@@ -32,12 +32,22 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <alsa/asoundlib.h>
-#include <pulse/simple.h>
-#include <pulse/error.h>
+#ifndef _WIN32
+    #include <unistd.h>
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <arpa/inet.h>
+    #include <alsa/asoundlib.h>
+    #include <pulse/simple.h>
+    #include <pulse/error.h>
+#else
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+    // Windows headers define 'interface' as a macro, which conflicts with our variable names
+    #ifdef interface
+        #undef interface
+    #endif
+#endif
 
 #include "../general/format.h"
 #include "../general/interface.h"
@@ -57,12 +67,28 @@ typedef struct src_hops_obj {
     interface_obj *interface;
 
     FILE * fp;
-    snd_pcm_t * ch;
-    pa_simple * pa;
-    pa_sample_spec ss;
-    pa_channel_map cm;
+    #ifndef _WIN32
+        snd_pcm_t * ch;
+        pa_simple * pa;
+        pa_sample_spec ss;
+        pa_channel_map cm;
+    #else
+        // WASAPI fields for Windows audio capture
+        void * audio_client;      // IAudioClient*
+        void * capture_client;    // IAudioCaptureClient*
+        void * wave_format;       // WAVEFORMATEX*
+        void * event_handle;      // HANDLE
+        void * mm_device;         // IMMDevice*
+        float * internal_buffer;  // Internal buffer for excess samples
+        unsigned int internal_buffer_size;
+        unsigned int internal_buffer_pos;
+    #endif
     struct sockaddr_in sserver;
-    int sid;
+    #ifndef _WIN32
+        int sid;
+    #else
+        SOCKET sid;
+    #endif
 
     char *buffer;
     unsigned int bufferSize;
@@ -77,7 +103,11 @@ typedef struct src_hops_cfg {
 
     format_obj * format;
     interface_obj * interface;
-    pa_channel_map * channel_map;
+    #ifndef _WIN32
+        pa_channel_map * channel_map;
+    #else
+        void * channel_map; // Placeholder for Windows builds
+    #endif
 
 } src_hops_cfg;
 

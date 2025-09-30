@@ -61,8 +61,9 @@
     int mod_stft_process(mod_stft_obj * obj) {
 
         int rtnValue;
+        int isZero = msg_hops_isZero(obj->in);
 
-        if (msg_hops_isZero(obj->in) == 0) {
+        if (isZero == 0) {
 
             if (obj->enabled == 1) {
 

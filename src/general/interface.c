@@ -376,6 +376,54 @@
 
     }
 
+    interface_obj * interface_construct_wasapi(const char * deviceName) {
+
+        interface_obj * obj;
+
+        obj = (interface_obj *) malloc(sizeof(interface_obj));
+
+        // +----------------------------------------------------------+
+        // | Type                                                     |
+        // +----------------------------------------------------------+
+
+            obj->type = interface_wasapi;
+
+        // +----------------------------------------------------------+
+        // | Blackhole                                                |
+        // +----------------------------------------------------------+
+
+            // (Empty)
+
+        // +----------------------------------------------------------+
+        // | File                                                     |
+        // +----------------------------------------------------------+
+
+            obj->fileName = (char *) NULL;
+
+        // +----------------------------------------------------------+
+        // | Socket                                                   |
+        // +----------------------------------------------------------+
+
+            obj->ip = (char *) NULL;
+            obj->port = 0;
+
+        // +----------------------------------------------------------+
+        // | Soundcard or Pulseaudio                                  |
+        // +----------------------------------------------------------+
+
+        obj->deviceName = (char *) malloc(sizeof(char) * (strlen(deviceName)+1));
+        strcpy(obj->deviceName, deviceName);
+
+        // +----------------------------------------------------------+
+        // | Terminal                                                 |
+        // +----------------------------------------------------------+
+
+            // (Empty)
+
+        return obj;
+
+    }
+
     interface_obj * interface_clone(const interface_obj * obj) {
 
         interface_obj * clone;
@@ -418,11 +466,11 @@
             }
 
         // +----------------------------------------------------------+
-        // | Soundcard or Pulseaudio                                  |
+        // | Soundcard or Pulseaudio or WASAPI                        |
         // +----------------------------------------------------------+
 
-            if (obj->type == interface_soundcard || obj->type == interface_pulseaudio) {
-                
+            if (obj->type == interface_soundcard || obj->type == interface_pulseaudio || obj->type == interface_wasapi) {
+
                 clone->deviceName = (char *) malloc(sizeof(char) * (strlen(obj->deviceName) + 1));
                 strcpy(clone->deviceName, obj->deviceName);
 
@@ -495,6 +543,12 @@
                 case interface_pulseaudio:
 
                     printf("type = pulseaudio, devicename = %s\n", obj->deviceName);
+
+                    break;
+
+                case interface_wasapi:
+
+                    printf("type = wasapi, devicename = %s\n", obj->deviceName);
 
                     break;
 

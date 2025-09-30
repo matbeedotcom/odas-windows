@@ -30,6 +30,7 @@
     #include <module/mod_sss.h>
 
     #include <stdio.h>
+    #include <complex.h>
 
     FILE * fidTmp1;
     FILE * fidTmp2;
@@ -461,6 +462,7 @@
 
     int mod_sss_process(mod_sss_obj * obj) {
 
+
         int rtnValue1;
         int rtnValue2;
         int rtnValue;
@@ -628,39 +630,78 @@
                 tracks_copy(obj->sep_gss_tracksNow,
                             obj->in3->tracks);
 
-                track2gain_process(obj->sep_gss_track2gain, 
+                track2gain_process(obj->sep_gss_track2gain,
                                    obj->sep_gss_beampatterns_mics,
                                    obj->sep_gss_tracksNow,
                                    obj->sep_gss_gains);
 
-                gain2mask_process(obj->sep_gss_gain2mask, 
-                                  obj->sep_gss_gains, 
+                static int gss_debug_count = 0;
+                gss_debug_count++;
+                if (gss_debug_count % 100 == 0) {
+                    printf("GSS_PIPELINE_DEBUG[%d]: After track2gain_process\n", gss_debug_count);
+                    if (obj->sep_gss_gains && obj->sep_gss_gains->array) {
+                        printf("  gains [0]: %.6f\n", obj->sep_gss_gains->array[0]);
+                    }
+                }
+
+                gain2mask_process(obj->sep_gss_gain2mask,
+                                  obj->sep_gss_gains,
                                   obj->sep_gss_masks);
 
-                track2steer_process(obj->sep_gss_track2steer, 
+                if (gss_debug_count % 100 == 0) {
+                    printf("GSS_PIPELINE_DEBUG[%d]: After gain2mask_process\n", gss_debug_count);
+                    if (obj->sep_gss_masks && obj->sep_gss_masks->array) {
+                        printf("  masks [0]: %.6f\n", obj->sep_gss_masks->array[0]);
+                    }
+                }
+
+                track2steer_process(obj->sep_gss_track2steer,
                                     obj->sep_gss_tracksNow,
                                     obj->sep_gss_gains,
                                     obj->sep_gss_masks,
                                     obj->sep_gss_steers);
 
+                if (gss_debug_count % 100 == 0) {
+                    printf("GSS_PIPELINE_DEBUG[%d]: After track2steer_process\n", gss_debug_count);
+                    // Note: steers structure needs investigation
+                    printf("  steers: processed\n");
+                }
+
                 demixings_copy(obj->sep_gss_demixingsPrev,
                                obj->sep_gss_demixingsNow);
 
-                steer2demixing_gss_process(obj->sep_gss_steer2demixing, 
-                                           obj->sep_gss_tracksPrev, 
-                                           obj->sep_gss_tracksNow, 
-                                           obj->sep_gss_steers, 
-                                           obj->sep_gss_masks, 
+                steer2demixing_gss_process(obj->sep_gss_steer2demixing,
+                                           obj->sep_gss_tracksPrev,
+                                           obj->sep_gss_tracksNow,
+                                           obj->sep_gss_steers,
+                                           obj->sep_gss_masks,
                                            obj->in1->freqs,
                                            obj->sep_gss_demixingsPrev,
                                            obj->sep_gss_demixingsNow);
 
-                demixing2freq_process(obj->sep_gss_demixing2freq, 
+                if (gss_debug_count % 100 == 0) {
+                    printf("GSS_PIPELINE_DEBUG[%d]: After steer2demixing_gss_process\n", gss_debug_count);
+                    if (obj->sep_gss_demixingsNow && obj->sep_gss_demixingsNow->array && obj->sep_gss_demixingsNow->array[0]) {
+                        // demixings array is float complex [halfFrameSize][nSeps*nChannels]
+                        float complex *first_elem = (float complex*)obj->sep_gss_demixingsNow->array[0];
+                        printf("  demixings [0][0]: %.6f+%.6fi\n",
+                               crealf(first_elem[0]), cimagf(first_elem[0]));
+                    }
+                }
+
+                demixing2freq_process(obj->sep_gss_demixing2freq,
                                       obj->sep_gss_tracksNow,
-                                      obj->sep_gss_demixingsNow, 
-                                      obj->sep_gss_masks, 
-                                      obj->in1->freqs, 
-                                      obj->out1->freqs);        
+                                      obj->sep_gss_demixingsNow,
+                                      obj->sep_gss_masks,
+                                      obj->in1->freqs,
+                                      obj->out1->freqs);
+
+                if (gss_debug_count % 100 == 0) {
+                    printf("GSS_PIPELINE_DEBUG[%d]: After demixing2freq_process (FINAL OUTPUT)\n", gss_debug_count);
+                    if (obj->out1->freqs && obj->out1->freqs->array) {
+                        printf("  final output [0][0]: %.6f\n", obj->out1->freqs->array[0][0]);
+                    }
+                }        
 
                 demixings_copy(obj->sep_demixings,
                                obj->sep_gss_demixingsNow);

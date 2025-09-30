@@ -7,6 +7,21 @@ The [ODAS wiki](https://github.com/introlab/odas/wiki) describes how to build an
 
 ROS: Please visite the [odas_ros project](https://github.com/introlab/odas_ros).
 
+## Building for Windows
+
+This fork includes Windows support with WASAPI audio input. To build for Windows:
+
+```bash
+./build-scripts/build_mingw.sh
+```
+
+See [docs/QUICKSTART_WINDOWS.md](docs/QUICKSTART_WINDOWS.md) for a quick start guide, or [docs/BUILD_WINDOWS.md](docs/BUILD_WINDOWS.md) for detailed instructions.
+
+**Windows Features:**
+- WASAPI support for low-latency multi-channel audio capture
+- Cross-compilation from Linux/WSL using MinGW-w64
+- Compatible with Teensy Audio and other USB audio devices
+
 [![ODAS Demonstration](https://img.youtube.com/vi/n7y2rLAnd5I/0.jpg)](https://youtu.be/n7y2rLAnd5I)
 
 # License

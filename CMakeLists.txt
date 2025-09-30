@@ -208,8 +208,8 @@ set(SRC_BASE
     src/module/mod_volume.c
 )
 
-# Network-related files that require sys/socket.h (not available on Windows)
-set(SRC_NETWORK
+# Sink and source files with socket support (now cross-platform)
+set(SRC_SINK_SOURCE
     src/sink/snk_categories.c
     src/sink/snk_hops.c
     src/sink/snk_pots.c
@@ -217,7 +217,7 @@ set(SRC_NETWORK
     src/sink/snk_spectra.c
     src/sink/snk_tracks.c
     src/source/src_hops.c
-    # Abstract sink/source files that also use network headers
+    # Abstract sink/source files
     src/asink/asnk_categories.c
     src/asink/asnk_hops.c
     src/asink/asnk_pots.c
@@ -227,27 +227,28 @@ set(SRC_NETWORK
     src/asource/asrc_hops.c
 )
 
-# Conditionally include network files based on platform
-if(WIN32 OR CMAKE_CROSSCOMPILING)
-    # Windows build: exclude network files
-    set(SRC ${SRC_BASE})
-else()
-    # Linux build: include all files
-    set(SRC ${SRC_BASE} ${SRC_NETWORK})
-endif()
+# Include all files on all platforms (socket code is now cross-platform)
+set(SRC ${SRC_BASE} ${SRC_SINK_SOURCE})
 
 add_library(odas SHARED
     ${SRC}
 )
 
 if(WIN32 OR CMAKE_CROSSCOMPILING)
-    # Windows: Use Windows audio APIs with pthread support
+    # Windows: Use Windows audio APIs with pthread and socket support
     target_link_libraries(odas
         ${PC_FFTW3_LIBRARIES}
         ${PC_LIBCONFIG_LIBRARIES}
-        winmm  # Windows Multimedia API
-        winpthread  # MinGW pthread support (use winpthread for MinGW)
+        kernel32   # Windows Kernel32 API (Sleep, etc.)
+        winmm      # Windows Multimedia API
+        ws2_32     # Winsock2 for socket support
+        ole32      # COM library for WASAPI
+        uuid       # UUID library for WASAPI GUIDs
+        propsys    # Property System library for PKEY_* symbols
+        winpthread # MinGW pthread support (use winpthread for MinGW)
     )
+    # Ensure all symbols are exported for DLL
+    set_target_properties(odas PROPERTIES LINK_FLAGS "-Wl,--export-all-symbols")
     # Add library search paths for Windows cross-compilation
     target_link_directories(odas PRIVATE ${PC_FFTW3_LIBRARY_DIRS} ${PC_LIBCONFIG_LIBRARY_DIRS})
 else()
@@ -262,8 +263,8 @@ else()
     )
 endif()
 
-# Only build demo executables for native compilation
-if(NOT CMAKE_CROSSCOMPILING)
+# Build demo executables (now supports Windows with winpthread)
+if(NOT CMAKE_CROSSCOMPILING OR WIN32)
     add_executable(odaslive
         demo/odaslive/main.c
         demo/odaslive/configs.c
@@ -272,18 +273,38 @@ if(NOT CMAKE_CROSSCOMPILING)
         demo/odaslive/profiler.c
         demo/odaslive/threads.c
     )
-    target_link_libraries(odaslive
-        odas
-        ${PC_LIBCONFIG_LIBRARIES}
-    )
+
+    # Add local libconfig paths for MinGW cross-compilation
+    if(WIN32 OR CMAKE_CROSSCOMPILING)
+        target_include_directories(odaslive PRIVATE ${CMAKE_BINARY_DIR}/deps/include)
+        target_link_libraries(odaslive
+            ${CMAKE_BINARY_DIR}/libodas_fixed.dll.a
+            ${CMAKE_BINARY_DIR}/deps/lib/libconfig.dll.a
+        )
+    else()
+        target_link_libraries(odaslive
+            odas
+            ${PC_LIBCONFIG_LIBRARIES}
+        )
+    endif()
 
     add_executable(odasserver
         demo/odasserver/main.c
     )
-    target_link_libraries(odasserver
-        odas
-        ${PC_LIBCONFIG_LIBRARIES}
-    )
+
+    # Add local libconfig paths for MinGW cross-compilation
+    if(WIN32 OR CMAKE_CROSSCOMPILING)
+        target_include_directories(odasserver PRIVATE ${CMAKE_BINARY_DIR}/deps/include)
+        target_link_libraries(odasserver
+            ${CMAKE_BINARY_DIR}/libodas_fixed.dll.a
+            ${CMAKE_BINARY_DIR}/deps/lib/libconfig.dll.a
+        )
+    else()
+        target_link_libraries(odasserver
+            odas
+            ${PC_LIBCONFIG_LIBRARIES}
+        )
+    endif()
 endif()
 
 if (NOT ODAS_DISABLE_INSTALL)

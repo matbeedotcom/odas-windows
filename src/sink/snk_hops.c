@@ -1,10 +1,10 @@
-   
+
    /**
     * \file     snk_hops.c
     * \author   François Grondin <francois.grondin2@usherbrooke.ca>
     * \version  2.0
     * \date     2018-03-18
-    * \copyright
+    * * \copyright
     *
     * Permission is hereby granted, free of charge, to any person obtaining
     * a copy of this software and associated documentation files (the
@@ -26,8 +26,22 @@
     * WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     *
     */
-    
+
     #include <sink/snk_hops.h>
+
+    #ifdef _WIN32
+        static int winsock_initialized = 0;
+        static void init_winsock() {
+            if (!winsock_initialized) {
+                WSADATA wsa;
+                if (WSAStartup(MAKEWORD(2,2), &wsa) != 0) {
+                    printf("Failed to initialize Winsock\n");
+                    exit(EXIT_FAILURE);
+                }
+                winsock_initialized = 1;
+            }
+        }
+    #endif
 
     snk_hops_obj * snk_hops_construct(const snk_hops_cfg * snk_hops_config, const msg_hops_cfg * msg_hops_config) {
 
@@ -145,6 +159,10 @@
 
     void snk_hops_open_interface_socket(snk_hops_obj * obj) {
 
+        #ifdef _WIN32
+            init_winsock();
+        #endif
+
         memset(&(obj->sserver), 0x00, sizeof(struct sockaddr_in));
 
         obj->sserver.sin_family = AF_INET;
@@ -152,12 +170,19 @@
         obj->sserver.sin_port = htons(obj->interface->port);
         obj->sid = socket(AF_INET, SOCK_STREAM, 0);
 
+        #ifdef _WIN32
+            if (obj->sid == INVALID_SOCKET) {
+                printf("Sink hops: Cannot create socket\n");
+                exit(EXIT_FAILURE);
+            }
+        #endif
+
         if ( (connect(obj->sid, (struct sockaddr *) &(obj->sserver), sizeof(obj->sserver))) < 0 ) {
 
             printf("Sink hops: Cannot connect to server\n");
             exit(EXIT_FAILURE);
 
-        }          
+        }
 
     }
 
@@ -208,7 +233,11 @@
 
     void snk_hops_close_interface_socket(snk_hops_obj * obj) {
 
-        close(obj->sid);
+        #ifdef _WIN32
+            closesocket(obj->sid);
+        #else
+            close(obj->sid);
+        #endif
 
     }
 
